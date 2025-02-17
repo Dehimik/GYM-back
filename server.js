@@ -3,7 +3,13 @@ const express = require("express");
 const cors = require("cors");
 
 const app = express();
-app.use(cors({ origin: "https://your-frontend-url.com", credentials: true }));
+
+// 📌 Дозволяємо запити з localhost та продакшену
+app.use(cors({
+    origin: ["http://localhost:3000", "https://gymvoid.vercel.app/"],
+    credentials: true
+}));
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
