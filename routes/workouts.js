@@ -1,13 +1,14 @@
+// routes/workouts.js
 const express = require('express');
 const router = express.Router();
-const db = require('../firebase');
+const { db } = require('../firebase'); // Firestore з firebase-admin
 const checkFirebaseToken = require('../middleware/auth');
 
 // ========================
 // 1) CRUD для Workouts
 // ========================
 
-// Create workout
+// Створення тренування
 router.post('/', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutName } = req.body;
@@ -15,7 +16,7 @@ router.post('/', checkFirebaseToken, async (req, res) => {
         const newWorkout = {
             created_at: new Date().toISOString(),
             userId,
-            workoutName
+            workoutName,
         };
         const docRef = await db.collection('workouts').add(newWorkout);
         res.status(201).json({ id: docRef.id, ...newWorkout });
@@ -25,11 +26,13 @@ router.post('/', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// GET all users workouts
+// Отримання всіх тренувань користувача
 router.get('/', checkFirebaseToken, async (req, res) => {
     try {
         const userId = req.user.uid;
-        const snapshot = await db.collection('workouts').where('userId', '==', userId).get();
+        const snapshot = await db.collection('workouts')
+            .where('userId', '==', userId)
+            .get();
         const workouts = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -41,7 +44,7 @@ router.get('/', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// GET ane workout
+// Отримання окремого тренування
 router.get('/:id', checkFirebaseToken, async (req, res) => {
     try {
         const docRef = db.collection('workouts').doc(req.params.id);
@@ -49,7 +52,6 @@ router.get('/:id', checkFirebaseToken, async (req, res) => {
         if (!docSnap.exists) {
             return res.status(404).json({ error: 'Workout not found' });
         }
-        // Check if user has this workout
         const workout = docSnap.data();
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
@@ -61,12 +63,11 @@ router.get('/:id', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// Update workout
+// Оновлення тренування
 router.put('/:id', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutName } = req.body;
         const docRef = db.collection('workouts').doc(req.params.id);
-
         const docSnap = await docRef.get();
         if (!docSnap.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -75,7 +76,6 @@ router.put('/:id', checkFirebaseToken, async (req, res) => {
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         await docRef.update({ workoutName });
         res.json({ message: 'Workout updated' });
     } catch (error) {
@@ -84,7 +84,7 @@ router.put('/:id', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// DELETE workout
+// Видалення тренування
 router.delete('/:id', checkFirebaseToken, async (req, res) => {
     try {
         const docRef = db.collection('workouts').doc(req.params.id);
@@ -96,7 +96,6 @@ router.delete('/:id', checkFirebaseToken, async (req, res) => {
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         await docRef.delete();
         res.json({ message: 'Workout deleted' });
     } catch (error) {
@@ -109,12 +108,11 @@ router.delete('/:id', checkFirebaseToken, async (req, res) => {
 // 2) CRUD для Exercises
 // ========================
 
-//Create excersize
+// Створення вправи для тренування
 router.post('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
     try {
         const { muscles, name, time } = req.body;
         const { workoutId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -123,13 +121,7 @@ router.post('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
-        const newExercise = {
-            muscles,
-            name,
-            time,
-            workoutId
-        };
+        const newExercise = { muscles, name, time, workoutId };
         const docRef = await db.collection('exercises').add(newExercise);
         res.status(201).json({ id: docRef.id, ...newExercise });
     } catch (error) {
@@ -138,11 +130,10 @@ router.post('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// GET all excersices for current workout
+// Отримання всіх вправ для тренування
 router.get('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -151,9 +142,7 @@ router.get('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
-        const snapshot = await db
-            .collection('exercises')
+        const snapshot = await db.collection('exercises')
             .where('workoutId', '==', workoutId)
             .get();
         const exercises = snapshot.docs.map(doc => ({
@@ -167,11 +156,10 @@ router.get('/:workoutId/exercises', checkFirebaseToken, async (req, res) => {
     }
 });
 
-// GET one excersize
+// Отримання однієї вправи
 router.get('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -180,7 +168,6 @@ router.get('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -189,7 +176,6 @@ router.get('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
         if (exercise.workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         res.json({ id: exerciseDoc.id, ...exercise });
     } catch (error) {
         console.error(error);
@@ -197,12 +183,11 @@ router.get('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
     }
 });
 
-// Update excersize
+// Оновлення вправи
 router.put('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId } = req.params;
         const { muscles, name, time } = req.body;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -211,7 +196,6 @@ router.put('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseRef = db.collection('exercises').doc(exerciseId);
         const exerciseDoc = await exerciseRef.get();
         if (!exerciseDoc.exists) {
@@ -221,7 +205,6 @@ router.put('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
         if (exercise.workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         await exerciseRef.update({ muscles, name, time });
         res.json({ message: 'Exercise updated' });
     } catch (error) {
@@ -230,11 +213,10 @@ router.put('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, 
     }
 });
 
-//DELETE excersize
+// Видалення вправи
 router.delete('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -243,7 +225,6 @@ router.delete('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (re
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseRef = db.collection('exercises').doc(exerciseId);
         const exerciseDoc = await exerciseRef.get();
         if (!exerciseDoc.exists) {
@@ -253,7 +234,6 @@ router.delete('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (re
         if (exercise.workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         await exerciseRef.delete();
         res.json({ message: 'Exercise deleted' });
     } catch (error) {
@@ -266,12 +246,11 @@ router.delete('/:workoutId/exercises/:exerciseId', checkFirebaseToken, async (re
 // 3) CRUD для Approaches
 // ========================
 
-// Create approach
+// Створення підходу для вправи
 router.post('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId } = req.params;
         const { number, reps, weight } = req.body;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -279,7 +258,6 @@ router.post('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, 
         if (workoutDoc.data().userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -287,13 +265,7 @@ router.post('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, 
         if (exerciseDoc.data().workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
-        const newApproach = {
-            exerciseId,
-            number,
-            reps,
-            weight
-        };
+        const newApproach = { exerciseId, number, reps, weight };
         const docRef = await db.collection('approaches').add(newApproach);
         res.status(201).json({ id: docRef.id, ...newApproach });
     } catch (error) {
@@ -302,11 +274,10 @@ router.post('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, 
     }
 });
 
-// GET all approaches for excersize
+// Отримання всіх підходів для вправи
 router.get('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -314,7 +285,6 @@ router.get('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, a
         if (workoutDoc.data().userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -322,11 +292,9 @@ router.get('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, a
         if (exerciseDoc.data().workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         const snapshot = await db.collection('approaches')
             .where('exerciseId', '==', exerciseId)
             .get();
-
         const approaches = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
@@ -338,11 +306,10 @@ router.get('/:workoutId/exercises/:exerciseId/approaches', checkFirebaseToken, a
     }
 });
 
-// GET ane approach
+// Отримання одного підходу
 router.get('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId, approachId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -350,7 +317,6 @@ router.get('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (workoutDoc.data().userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -358,7 +324,6 @@ router.get('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (exerciseDoc.data().workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         const approachDoc = await db.collection('approaches').doc(approachId).get();
         if (!approachDoc.exists) {
             return res.status(404).json({ error: 'Approach not found' });
@@ -367,7 +332,6 @@ router.get('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (approach.exerciseId !== exerciseId) {
             return res.status(403).json({ error: 'Approach does not belong to this exercise' });
         }
-
         res.json({ id: approachDoc.id, ...approach });
     } catch (error) {
         console.error(error);
@@ -375,12 +339,11 @@ router.get('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
     }
 });
 
-// Update approach
+// Оновлення підходу
 router.put('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId, approachId } = req.params;
         const { number, reps, weight } = req.body;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -388,7 +351,6 @@ router.put('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (workoutDoc.data().userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -396,7 +358,6 @@ router.put('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (exerciseDoc.data().workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         const approachRef = db.collection('approaches').doc(approachId);
         const approachDoc = await approachRef.get();
         if (!approachDoc.exists) {
@@ -405,7 +366,6 @@ router.put('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
         if (approachDoc.data().exerciseId !== exerciseId) {
             return res.status(403).json({ error: 'Approach does not belong to this exercise' });
         }
-
         await approachRef.update({ number, reps, weight });
         res.json({ message: 'Approach updated' });
     } catch (error) {
@@ -414,11 +374,10 @@ router.put('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFire
     }
 });
 
-// DELETE approach
+// Видалення підходу
 router.delete('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutId, exerciseId, approachId } = req.params;
-
         const workoutDoc = await db.collection('workouts').doc(workoutId).get();
         if (!workoutDoc.exists) {
             return res.status(404).json({ error: 'Workout not found' });
@@ -426,7 +385,6 @@ router.delete('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkF
         if (workoutDoc.data().userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-
         const exerciseDoc = await db.collection('exercises').doc(exerciseId).get();
         if (!exerciseDoc.exists) {
             return res.status(404).json({ error: 'Exercise not found' });
@@ -434,7 +392,6 @@ router.delete('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkF
         if (exerciseDoc.data().workoutId !== workoutId) {
             return res.status(403).json({ error: 'Exercise does not belong to this workout' });
         }
-
         const approachRef = db.collection('approaches').doc(approachId);
         const approachDoc = await approachRef.get();
         if (!approachDoc.exists) {
@@ -443,7 +400,6 @@ router.delete('/:workoutId/exercises/:exerciseId/approaches/:approachId', checkF
         if (approachDoc.data().exerciseId !== exerciseId) {
             return res.status(403).json({ error: 'Approach does not belong to this exercise' });
         }
-
         await approachRef.delete();
         res.json({ message: 'Approach deleted' });
     } catch (error) {
