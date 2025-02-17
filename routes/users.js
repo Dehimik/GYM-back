@@ -1,39 +1,30 @@
 const express = require("express");
 const router = express.Router();
-const admin = require("../firebase"); // Firebase Admin SDK
-const db = admin.firestore();
-const firebase = require("firebase/app");
-require("firebase/auth");
-
-// Ініціалізація Firebase (якщо ще не ініціалізовано)
-const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-};
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+const { db, admin } = require("../firebase"); // Використовуємо Firebase Admin SDK
 
 // 📌 ✅ Реєстрація нового користувача
 router.post("/register", async (req, res) => {
     try {
         const { email, password, username } = req.body;
 
-        // Створюємо користувача у Firebase Authentication
-        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-        const uid = userCredential.user.uid;
+        // Створюємо користувача у Firebase Authentication (АДМІНСЬКА ВЕРСІЯ)
+        const userRecord = await admin.auth().createUser({
+            email,
+            password,
+            displayName: username,
+        });
 
         // Додаємо користувача у Firestore
-        await db.collection("users").doc(uid).set({
+        await db.collection("users").doc(userRecord.uid).set({
             username,
             email,
             createdAt: new Date().toISOString(),
         });
 
-        // Отримуємо токен для сесії
-        const token = await userCredential.user.getIdToken();
+        // Генеруємо токен
+        const token = await admin.auth().createCustomToken(userRecord.uid);
 
-        res.status(201).json({ message: "User registered", uid, token });
+        res.status(201).json({ message: "User registered", uid: userRecord.uid, token });
     } catch (error) {
         console.error(error);
         res.status(400).json({ error: error.message });
@@ -43,14 +34,15 @@ router.post("/register", async (req, res) => {
 // 📌 ✅ Логін користувача
 router.post("/login", async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email } = req.body;
 
-        // Авторизація у Firebase Authentication
-        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
-        const token = await userCredential.user.getIdToken();
-        const uid = userCredential.user.uid;
+        // Отримуємо користувача через email
+        const userRecord = await admin.auth().getUserByEmail(email);
 
-        res.status(200).json({ message: "Login successful", uid, token });
+        // Генеруємо кастомний токен
+        const token = await admin.auth().createCustomToken(userRecord.uid);
+
+        res.status(200).json({ message: "Login successful", uid: userRecord.uid, token });
     } catch (error) {
         console.error(error);
         res.status(400).json({ error: "Invalid email or password" });

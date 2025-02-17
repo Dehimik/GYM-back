@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "GYM-back/node_modules/.bin/nodemon server.js",
+    "dev": "nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,8 +14,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "firebase-admin": "^13.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "nodeman": "^1.1.2"
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "cors": "^2.8.5",

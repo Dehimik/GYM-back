@@ -1,15 +1,13 @@
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
 
-const firebaseConfig = {
-    type: "service_account",
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    client_email: process.env.FIREBASE_CLIENT_EMAIL
-};
+// Завантажуємо конфігурацію напряму
+const serviceAccount = require("./firebase-adminsdk.json");
 
-admin.initializeApp({
-    credential: admin.credential.cert(firebaseConfig)
-});
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
+}
 
 const db = admin.firestore();
-module.exports = db;
+module.exports = { admin, db };
