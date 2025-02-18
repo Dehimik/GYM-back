@@ -12,6 +12,7 @@ const checkFirebaseToken = require('../middleware/auth');
 router.post('/', checkFirebaseToken, async (req, res) => {
     try {
         const { workoutName, duration, description } = req.body;
+        const userId = req.user.uid; // Додаємо визначення userId
         const newWorkout = {
             created_at: new Date().toISOString(),
             userId,
@@ -77,7 +78,7 @@ router.put('/:id', checkFirebaseToken, async (req, res) => {
         if (workout.userId !== req.user.uid) {
             return res.status(403).json({ error: 'Access denied' });
         }
-        await docRef.update({ workoutName });
+        await docRef.update({ ...req.body });
         res.json({ message: 'Workout updated' });
     } catch (error) {
         console.error(error);
