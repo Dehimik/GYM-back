@@ -4,7 +4,6 @@ const cors = require("cors");
 
 const app = express();
 
-// 📌 Дозволяємо запити з localhost та продакшену
 app.use(cors({
     origin: ["http://localhost:3000", "https://gymvoid.vercel.app/"],
     credentials: true
@@ -18,8 +17,10 @@ app.get("/", (req, res) => {
 
 const userRoutes = require("./routes/users");
 app.use("/users", userRoutes);
-const userRoutes = require("./routes/workouts");
-app.use("/workouts", userRoutes);
+
+const workoutRoutes = require("./routes/workouts"); // ✅ Нове ім'я змінної
+app.use("/workouts", workoutRoutes);
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
